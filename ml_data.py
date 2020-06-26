@@ -23,8 +23,9 @@ class SimpleImputer(SklearnSimpleImputer):
 
 class OneHotEncoder(SklearnOneHotEncoder):
     def transform(self, X):
+        sparse_matrix = super(OneHotEncoder, self).transform(X)
         new_columns = self.get_new_columns(X=X)
-        return pd.DataFrame(super().transform(X).toarray(), columns=new_columns, index=X.index)
+        return pd.DataFrame(sparse_matrix.toarray(), columns=new_columns, index=X.index)
 
     def get_new_columns(self, X):
         new_columns = []
@@ -34,7 +35,6 @@ class OneHotEncoder(SklearnOneHotEncoder):
                 new_columns.append(f'{column}_{self.categories_[i][j]}')
                 j += 1
         return new_columns
-
 class TestSplit:
     def split_test(self, dataset, target):
         self.features_without_target = dataset.drop(target, axis=1)
@@ -42,16 +42,8 @@ class TestSplit:
 
         X_train, X_test, y_train, y_test = train_test_split(self.features_without_target, self.target_feature)
         return X_train, X_test, y_train, y_test
-
-class Preprocessor(ColumnTransformer):
-    def __init__(self, dataset):
-        self.numeric_features = dataset.select_dtypes(np.number)
-        self.categorical_features = dataset.select_dtypes(exclude=np.number)
-        super().__init__(transformers= [
-            ('nums', self.transform_numeric_features(), self.numeric_features.columns),
-            ('cats', self.transform_categorical_features(), self.categorical_features.columns)
-        ]
-
+        
+class Preprocessor(TransformerMixin):
     @staticmethod
     def transform_numeric_features():
         return Pipeline(steps=[
@@ -66,33 +58,29 @@ class Preprocessor(ColumnTransformer):
             ('onehot', OneHotEncoder())
             ])
 
-    # def transform_columns(self):
-    #     return ColumnTransformer(transformers = [
-    #         ('nums', self.transform_numeric_features(), self.numeric_features.columns),
-    #         ('cats', self.transform_categorical_features(), self.categorical_features.columns)
-    #         ])
+    def transform_columns(self):
+        return ColumnTransformer(transformers = [
+            ('nums', self.transform_numeric_features(), self.numeric_features.columns),
+            ('cats', self.transform_categorical_features(), self.categorical_features.columns)
+            ])
 
     def get_column_names(self):
-        nums_names = self.transformers['nums'].fit_transform(self.numeric_features).columns
-        cats_names = self.transformers['cats'].fit_transform(self.categorical_features).columns #implement.named_transformers_['cats'].fit_transform(self.categorical_features).columns
+        nums_names = self.implement.named_transformers_['nums'].fit_transform(self.numeric_features).columns
+        cats_names = self.implement.named_transformers_['cats'].fit_transform(self.categorical_features).columns
         feat_names = np.concatenate([nums_names, cats_names])
         return feat_names
 
-    # def fit(self, X):
-    #     # self.dataset = X
-    #     # self.numeric_features = X.select_dtypes(np.number)
-    #     # self.categorical_features = X.select_dtypes(exclude=np.number)
-    #     # self.implement = self.transform_columns()
-    #     # self.transformed_data = self.implement.fit_transform(X)
-    #     return self
+    def fit(self, X):
+        self.dataset = X
+        self.numeric_features = X.select_dtypes(np.number)
+        self.categorical_features = X.select_dtypes(exclude=np.number)
+        self.implement = self.transform_columns()
+        self.transformed_data = self.implement.fit_transform(X)
+        return self
 
     def transform(self, X):
         column_names = self.get_column_names()
-        print("HELLO!!!IMHERE")
-        return pd.DataFrame(super().transform(X).toarray(), columns=column_names, index=X.index)
-
-        # column_names = self.get_column_names()
-        # return pd.DataFrame(self.transformed_data, columns=column_names, index=X.index)
+        return pd.DataFrame(self.transformed_data, columns=column_names, index=X.index)
 
 
 
@@ -101,9 +89,9 @@ class Preprocessor(ColumnTransformer):
 train_data = pd.read_csv('./data/marketing_train.csv')
 
 a = TestSplit().split_test(train_data, "insurance_subscribe")
-# print(a[0])
+print(a[0])
 
-b = Preprocessor(a[0]).fit_transform(a[0])
+b = Preprocessor().fit_transform(a[0])
 print(b)
 
 ########################################
