@@ -1,22 +1,81 @@
 import argparse
 import pandas as pd
 
-from ml_class import TestSplit, Preprocessor, RobustScaler
+from collections import namedtuple
+from itertools import product
 
-from sklearn.linear_model import LogisticRegression
+from ml_class import TestSplit, Preprocessor#, RobustScaler, StandardScaler
+
+from sklearn.preprocessing import RobustScaler, StandardScaler, MinMaxScaler, MaxAbsScaler
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.ensemble import RandomForestRegressor
+
+from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 
 def main():
-    preprocessor = Preprocessor(RobustScaler())
-    model = LogisticRegression(max_iter=600)
+    scalers = [RobustScaler, StandardScaler, MinMaxScaler, MaxAbsScaler]
+    # models = [LogisticRegression, DecisionTreeClassifier]
 
-    train_score, validation_score = process_train_data(preprocessor, model)
-    test_score = process_test_data(preprocessor, model)
+    models = {
+        LogisticRegression: {"max_iter": 700},
+        DecisionTreeClassifier: {"max_depth": 4}
+    }
 
-    # for 
+    # dataset_type = ['train', 'validation', 'test']
 
-    save_report(train_score, validation_score, test_score)
+    # comb = list(product(scalers, models))
+
+    # scalers_models_combination = list(product(scalers, models))
+    index_combination = list(product(scalers, models))
+
+    a = namedtuple('Index', 'scaler model')
+    index_combination_a = [a(index[0], index[1]) for index in index_combination]
+
+    # print(scalers_models_combination)
     
+    # comb_n = []
+    # for index in scalers_models_combination:
+        # scaler = index[0]
+        # model = index[1]
+
+        # combination_name = f"{scaler.__name__}-{model.__name__}"
+        # comb_n.append(combination_name)
+    
+    # a = list(product(comb_n, dataset_type))
+
+    # index = pd.MultiIndex.from_tuples(index_combination_a, names=["scaler", "model"])
+
+    # report_df = pd.DataFrame(index=index, columns=["Precision", "Recall", "Accuracy", "F1"])
+
+    report_df = pd.DataFrame()
+    prediction_df = pd.DataFrame()
+
+    for index in index_combination_a:
+        # scaler = index[0]
+        # model = index[1]
+        # combination_name = f"{scaler.__name__}-{model.__name__}"
+
+        preprocessor = Preprocessor(index.scaler)
+        model = index.model(**models[index.model])#(max_iter=700, max_depth=4)
+
+        train_score, validation_score = process_train_data(preprocessor, model)
+        test_prediction, test_score = process_test_data(preprocessor, model)
+        prediction_df[f"{index.scaler.__name__}-{index.model.__name__}"] = test_prediction
+
+        dataset_type = {'train': train_score, 'validation': validation_score, 'test': test_score}
+
+        report_df = add_report(report_df, index.scaler, index.model, dataset_type)
+        
+        # report_df = report_df.append(add_report(report_df, index.scaler, index.model, dataset_type))
+
+        print(f"finish {index}")
+
+    # print(report_df)
+
+    prediction_df.to_csv('./result/{}'.format(get_arguments().prediction))
+    report_df.to_csv('./result/{}'.format(get_arguments().report))
+
 def process_train_data(preprocessor, model):
     # get dataset
     train_data = get_data('marketing_train.csv')
@@ -41,22 +100,25 @@ def process_train_data(preprocessor, model):
     return train_score, validation_score
 
 def process_test_data(preprocessor, model):
+    """
+    return: prediction, score
+    """
+
     # get dataset
     arguments = get_arguments()
     test_data = get_data(arguments.input)
     target = arguments.target
 
     # transform
-    test_transformed = transform_data(preprocessor, test_data.drop(target, axis=1)) ##preprocessor
+    test_transformed = transform_data(preprocessor, test_data.drop(target, axis=1))
 
     # predict
-    test_prediction = predict_data(model, test_transformed) ##model
-    save_prediction(test_prediction, arguments.prediction)
-
+    test_prediction = predict_data(model, test_transformed)
+        
     # score
     test_score = get_scores(test_data[target], test_prediction)
 
-    return test_score
+    return test_prediction, test_score
 
 def get_arguments():
     parser = argparse.ArgumentParser()
@@ -85,31 +147,24 @@ def get_scores(actual_y, predicted_y):
 
     return scores
 
-def save_prediction(prediction, file_name):
-    prediction_df = pd.DataFrame(prediction, columns=["Predicted value"]).rename_axis("ID")
-    prediction_df.to_csv('./result/{}'.format(file_name))
+def add_report(report, scaler, model, dataset_type):
+    # dataset_type = {'train': train_score, 'validation': validation_score, 'test': test_score}
 
-    return prediction_df
+    # print(report)
 
-def save_report(train_score, validation_score, test_score):
-    index_list = [
-        ['Robust-Logistic', 'Robust-Logistic', 'Robust-Logistic'],
-        ['train', 'validation', 'test']
-    ]
-    index = pd.MultiIndex.from_arrays(index_list, names=('scaler_model', 'data'))
-
-    report_df = pd.DataFrame(index=index, columns=["Precision", "Recall", "Accuracy", "F1"])
-
-    dataset_type = {'train': train_score, 'validation': validation_score, 'test': test_score}
-    
     for data, score in dataset_type.items():
-        report_df.loc[('Robust-Logistic', data)] = score
-    
-    report_df.to_csv('./result/{}'.format(get_arguments().report))
+        index = pd.MultiIndex.from_tuples([(scaler.__name__, model.__name__, data)], names=["scaler", "model", "data"])
+        # c = pd.Series(score, index=["Precision", "Recall", "Accuracy", "F1"], name=index) #(scaler.__name__, model.__name__, data))
+        # c = report.append((score, index=report.columns))
+        # print(c)
+        d = pd.DataFrame([score], columns=["Precision", "Recall", "Accuracy", "F1"], index=index)
+        # print(d)
 
-    print(report_df)
+        report = report.append(d)
+        # print(report)
+        # report.loc[scaler, model, data] = score
 
-    return report_df
+    return report
 
 if __name__ == "__main__":
     main()
