@@ -1,100 +1,157 @@
+import argparse
 import pandas as pd
-import numpy as np
 
-from sklearn.compose import make_column_transformer, ColumnTransformer, make_column_selector
-from sklearn.pipeline import Pipeline, make_pipeline
-from sklearn.preprocessing import RobustScaler, OneHotEncoder, StandardScaler
+from itertools import product
+from collections import namedtuple
+from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler, MaxAbsScaler
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
+
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import cross_val_score
-from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestClassifier
 
-train_data = pd.read_csv('./data/marketing_train.csv')
-test_data = pd.read_csv('./data/marketing_test.csv')
+from ml_class import TestSplit, Preprocessor
 
-# onehot_marketing = OneHotEncoder().fit_transform(marketing.select_dtypes(include=['object']))
+def main():
+    scalers = [
+        StandardScaler,
+        RobustScaler,
+        MinMaxScaler,
+        MaxAbsScaler
+    ]
 
-# onehot_data = pd.DataFrame(onehot_marketing.toarray())
+    models = {
+        LogisticRegression: {"max_iter": 700},
+        DecisionTreeClassifier: {"max_depth": 4},
+        RandomForestClassifier: {"max_depth": 4}
+    }
 
+    # get combinations of scalers and models
+    scaler_model_combination = list(product(scalers, models))
+    named_tuple = namedtuple('Index', 'scaler model')
+    index_combination = [named_tuple(index[0], index[1]) for index in scaler_model_combination]
 
-# process = make_column_transformer(
-#     (OneHotEncoder(categories='auto'), [0]),
-#     remainder='passthrough'
-# )
+    # create dataframes for prediction and report
+    prediction_df = pd.DataFrame()
+    report_df = pd.DataFrame()
 
+    # transform, predict, score for each combination
+    for index in index_combination:
 
-numeric_features = train_data.select_dtypes(np.number).columns
-categorical_features = train_data.select_dtypes(['object', 'bool', 'category']).columns
+        # assign preprocessor and model
+        preprocessor = Preprocessor(index.scaler)
+        model = index.model(**models[index.model])
 
-# numeric_features = train_data.select_dtypes(exclude=['object']).columns
-# categorical_features = train_data.select_dtypes(include=['object']).columns
+        # process train, validation, test data
+        train_score, validation_score = process_train_data(preprocessor, model)
+        test_prediction, test_score = process_test_data(preprocessor, model)
 
-# numeric_features = make_column_selector(marketing, dtype_exclude='object')
-# categorical_features = make_column_selector(marketing, dtype_include='object')
-##TypeError: 'DataFrame' objects are mutable, thus they cannot be hashed
+        # add predicted data to prediction dataframe
+        prediction_df[f"{index.scaler.__name__}-{index.model.__name__}"] = test_prediction
 
-# numeric_features = list(train_data.columns[train_data.dtypes == 'int64'])
-# categorical_features = list(train_data.columns[train_data.dtypes == 'object'])
+        # add scores to report dataframe
+        scores = {'train': train_score, 'validation': validation_score, 'test': test_score}
+        report_df = add_report(report_df, index.scaler, index.model, scores)
+    
+    # save prediction and report to csv files
+    prediction_df.to_csv('./result/{}'.format(get_arguments().prediction))
+    report_df.to_csv('./result/{}'.format(get_arguments().report))
 
+def process_train_data(preprocessor, model):
+    """
+    return: score(train data, validation data)
+    """
 
+    # get dataset
+    train_data = get_data('marketing_train.csv')
 
-numeric_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='median')),
-    ('scaler', StandardScaler())
+    # split data
+    target = get_arguments().target
+    X_train, X_validation, y_train, y_validation = TestSplit().split_test(train_data, target)
 
-])
+    # fit and transform
+    X_train_transformed = preprocessor.fit_transform(X_train)
+    X_validation_transformed = transform_data(preprocessor, X_validation)
 
-categorical_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='most_frequent')),
-    ('onehot', OneHotEncoder()), #handle_unknown='ignore'
-])
+    # fit and predict
+    model.fit(X_train_transformed, y_train)
+    X_train_prediction = predict_data(model, X_train_transformed)
+    X_validatrion_prediction = predict_data(model, X_validation_transformed)
 
+    # score
+    train_score = get_scores(y_train, X_train_prediction)
+    validation_score = get_scores(y_validation, X_validatrion_prediction)
 
-preprocessor = ColumnTransformer(
-    transformers = [
-        ('nums', numeric_transformer, numeric_features),
-        ('cats', categorical_transformer, categorical_features)
-    ] #n_jobs=-1
-)  
+    return train_score, validation_score
 
-## ValueError: No valid specification of the columns. Only a scalar, list or slice of all integers or all strings, or boolean mask is allowed
-## df.select_dtypes() doesn't output column indices. It outputs a subset of the DataFrame with the matched columns.
+def process_test_data(preprocessor, model):
+    """
+    return: prediction, score
+    """
 
-# print(marketing.select_dtypes(include=['object']))
-# print(make_column_selector(marketing, dtype_include='object'))
+    # get dataset
+    arguments = get_arguments()
+    test_data = get_data(arguments.input)
+    target = arguments.target
 
-preprocessor_fit = preprocessor.fit_transform(train_data)
+    # transform
+    test_transformed = transform_data(preprocessor, test_data.drop(target, axis=1))
 
-pre = preprocessor.named_transformers_['cats']['onehot'].get_feature_names(categorical_features)
+    # predict
+    test_prediction = predict_data(model, test_transformed)
+        
+    # score
+    test_score = get_scores(test_data[target], test_prediction)
 
-# pre2 = preprocessor.named_transformers_['nums']['scaler'].get_feature_names()
-# AttributeError: 'StandardScaler' object has no attribute 'get_feature_names'
+    return test_prediction, test_score
 
-labels = np.concatenate([numeric_features, pre])
-print(labels)
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input', default='marketing_test.csv', help='Write file name you want to predict')
+    parser.add_argument('--prediction', default='pred.csv', help='Write file name you want to save prediction as')
+    parser.add_argument('--report', default='report.csv', help='Write file name you want to save report as')
+    parser.add_argument('--target', default='insurance_subscribe', help='Write target feature')
 
-print(pd.DataFrame(preprocessor_fit, columns = labels))
+    return parser.parse_args()
 
+def get_data(file_name):
+    return pd.read_csv('./data/{}'.format(file_name))
 
-# print(numeric_transformer.fit_transform(train_data.select_dtypes(np.number)))
-# print(categorical_transformer.fit_transform(train_data.select_dtypes(['object', 'bool', 'category'])))
+def transform_data(preprocessor, dataset_without_target):
+    return preprocessor.transform(dataset_without_target)
 
-# pipe = Pipeline([
-#     ('preprocessor', preprocessor),
-#     ('regression', LogisticRegression) ##classifier
-# ])
+def predict_data(model, transformed_data):
+    return model.predict(transformed_data)
 
-# pipe.fit(train_data, train_data['insurance_subscribe'])
+def get_scores(actual_y, predicted_y):
+    score_functions = [precision_score, recall_score, accuracy_score, f1_score]
+    scores = []
 
+    for function in score_functions:
+        scores.append(function(actual_y, predicted_y))
 
-# print(numeric_transformer.fit_transform(marketing.select_dtypes(exclude=['object'])))
-# print(categorical_transformer.fit_transform(marketing.select_dtypes(include=['object'])).toarray())
+    return scores
 
+def add_report(report, scaler, model, scores):
+    for data_name, score in scores.items():
 
-#cross_val_score(pipe, x, y, cv=5, scoring='accuracy').mean()
-#grid = GridSearchCV(model_pipeline, param_grid=param, cv=5).fit(X_train, y_train)
-#grid.score(X_test, y_test)
+        # get multi-index for report dataframe
+        report_index = pd.MultiIndex.from_tuples(
+            [(scaler.__name__, model.__name__, data_name)],
+            names=["scaler", "model", "data"]
+            )
 
+        # create dataframe for scores
+        score_data = pd.DataFrame(
+            [score],
+            columns=["Precision", "Recall", "Accuracy", "F1"],
+            index=report_index
+            )
 
-# print(marketing.dtypes)
-# print(marketing.isna().sum())
-# print(marketing_test.isnull().sum())
+        # append score data to original report
+        report = report.append(score_data)
+
+    return report
+
+if __name__ == "__main__":
+    main()
