@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_sc
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import LinearSVC
 
 from ml_class import TestSplit, Preprocessor
 
@@ -23,7 +24,8 @@ def main():
     models = {
         LogisticRegression: {"max_iter": 700},
         DecisionTreeClassifier: {"max_depth": 4},
-        RandomForestClassifier: {"max_depth": 4}
+        RandomForestClassifier: {"max_depth": 4},
+        LinearSVC: {"dual": False}
     }
 
     # get combinations of scalers and models
@@ -63,7 +65,8 @@ def process_train_data(preprocessor, model):
     """
 
     # get dataset
-    train_data = get_data('marketing_train.csv')
+    arguments = get_arguments()
+    train_data = get_data(arguments.train)
 
     # split data
     target = get_arguments().target
@@ -76,11 +79,11 @@ def process_train_data(preprocessor, model):
     # fit and predict
     model.fit(X_train_transformed, y_train)
     X_train_prediction = predict_data(model, X_train_transformed)
-    X_validatrion_prediction = predict_data(model, X_validation_transformed)
+    X_validation_prediction = predict_data(model, X_validation_transformed)
 
     # score
     train_score = get_scores(y_train, X_train_prediction)
-    validation_score = get_scores(y_validation, X_validatrion_prediction)
+    validation_score = get_scores(y_validation, X_validation_prediction)
 
     return train_score, validation_score
 
@@ -107,6 +110,7 @@ def process_test_data(preprocessor, model):
 
 def get_arguments():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--train', default='marketing_train.csv', help='Write file name you want to train')
     parser.add_argument('--input', default='marketing_test.csv', help='Write file name you want to predict')
     parser.add_argument('--prediction', default='pred.csv', help='Write file name you want to save prediction as')
     parser.add_argument('--report', default='report.csv', help='Write file name you want to save report as')
