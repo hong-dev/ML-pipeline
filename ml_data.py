@@ -13,6 +13,16 @@ from sklearn.svm import LinearSVC
 
 from ml_class import TestSplit, Preprocessor
 
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--train', default='marketing_train.csv', help='Write file name you want to train')
+    parser.add_argument('--input', default='marketing_test.csv', help='Write file name you want to predict')
+    parser.add_argument('--prediction', default='pred.csv', help='Write file name you want to save prediction as')
+    parser.add_argument('--report', default='report.csv', help='Write file name you want to save report as')
+    parser.add_argument('--target', default='insurance_subscribe', help='Write target feature')
+
+    return parser.parse_args()
+
 def main():
     scalers = [
         StandardScaler,
@@ -56,8 +66,9 @@ def main():
         report_df = add_report(report_df, index.scaler, index.model, scores)
     
     # save prediction and report to csv files
-    prediction_df.to_csv('./result/{}'.format(get_arguments().prediction))
-    report_df.to_csv('./result/{}'.format(get_arguments().report))
+    arguments = get_arguments()
+    save_data(prediction_df, arguments.prediction)
+    save_data(report_df, arguments.report)
 
 def process_train_data(preprocessor, model):
     """
@@ -74,12 +85,12 @@ def process_train_data(preprocessor, model):
 
     # fit and transform
     X_train_transformed = preprocessor.fit_transform(X_train)
-    X_validation_transformed = transform_data(preprocessor, X_validation)
+    X_validation_transformed = preprocessor.transform(X_validation)
 
     # fit and predict
     model.fit(X_train_transformed, y_train)
-    X_train_prediction = predict_data(model, X_train_transformed)
-    X_validation_prediction = predict_data(model, X_validation_transformed)
+    X_train_prediction = model.predict(X_train_transformed)
+    X_validation_prediction = model.predict(X_validation_transformed)
 
     # score
     train_score = get_scores(y_train, X_train_prediction)
@@ -98,34 +109,21 @@ def process_test_data(preprocessor, model):
     target = arguments.target
 
     # transform
-    test_transformed = transform_data(preprocessor, test_data.drop(target, axis=1))
+    test_transformed = preprocessor.transform(test_data.drop(target, axis=1))
 
     # predict
-    test_prediction = predict_data(model, test_transformed)
+    test_prediction = model.predict(test_transformed)
         
     # score
     test_score = get_scores(test_data[target], test_prediction)
 
     return test_prediction, test_score
 
-def get_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--train', default='marketing_train.csv', help='Write file name you want to train')
-    parser.add_argument('--input', default='marketing_test.csv', help='Write file name you want to predict')
-    parser.add_argument('--prediction', default='pred.csv', help='Write file name you want to save prediction as')
-    parser.add_argument('--report', default='report.csv', help='Write file name you want to save report as')
-    parser.add_argument('--target', default='insurance_subscribe', help='Write target feature')
-
-    return parser.parse_args()
-
 def get_data(file_name):
     return pd.read_csv('./data/{}'.format(file_name))
 
-def transform_data(preprocessor, dataset_without_target):
-    return preprocessor.transform(dataset_without_target)
-
-def predict_data(model, transformed_data):
-    return model.predict(transformed_data)
+def save_data(dataset, file_name):
+    return dataset.to_csv('./result/{}'.format(file_name))
 
 def get_scores(actual_y, predicted_y):
     score_functions = [precision_score, recall_score, accuracy_score, f1_score]
