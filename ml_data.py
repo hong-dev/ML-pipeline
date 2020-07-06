@@ -66,7 +66,6 @@ def main():
         report_df = add_report(report_df, index.scaler, index.model, scores)
     
     # save prediction and report to csv files
-    
     arguments = get_arguments()
     result_path = './result/{}'
 
