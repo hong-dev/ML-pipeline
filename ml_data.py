@@ -1,3 +1,4 @@
+import os
 import argparse
 import pandas as pd
 
@@ -67,10 +68,10 @@ def main():
     
     # save prediction and report to csv files
     arguments = get_arguments()
-    result_path = './result/{}'
+    result_dir = './result'
 
-    prediction_df.to_csv(result_path.format(arguments.prediction))
-    report_df.to_csv(result_path.format(arguments.report))
+    prediction_df.to_csv(os.path.join(result_dir, arguments.prediction))
+    report_df.to_csv(os.path.join(result_dir, arguments.report))
 
 def process_train_data(preprocessor, model):
     """
@@ -79,7 +80,7 @@ def process_train_data(preprocessor, model):
 
     # get dataset
     arguments = get_arguments()
-    train_data = pd.read_csv('./data/{}'.format(arguments.train))
+    train_data = pd.read_csv(os.path.join('./data', arguments.train))
 
     # split data
     target = get_arguments().target
@@ -107,7 +108,7 @@ def process_test_data(preprocessor, model):
 
     # get dataset
     arguments = get_arguments()
-    test_data = pd.read_csv('./data/{}'.format(arguments.input))
+    test_data = pd.read_csv(os.path.join('./data', arguments.input))
     target = arguments.target
 
     # transform
