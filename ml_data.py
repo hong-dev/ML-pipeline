@@ -1,3 +1,4 @@
+import os
 import argparse
 import pandas as pd
 
@@ -67,8 +68,10 @@ def main():
     
     # save prediction and report to csv files
     arguments = get_arguments()
-    save_data(prediction_df, arguments.prediction)
-    save_data(report_df, arguments.report)
+    result_dir = './result'
+
+    prediction_df.to_csv(os.path.join(result_dir, arguments.prediction))
+    report_df.to_csv(os.path.join(result_dir, arguments.report))
 
 def process_train_data(preprocessor, model):
     """
@@ -77,7 +80,7 @@ def process_train_data(preprocessor, model):
 
     # get dataset
     arguments = get_arguments()
-    train_data = get_data(arguments.train)
+    train_data = pd.read_csv(os.path.join('./data', arguments.train))
 
     # split data
     target = get_arguments().target
@@ -105,7 +108,7 @@ def process_test_data(preprocessor, model):
 
     # get dataset
     arguments = get_arguments()
-    test_data = get_data(arguments.input)
+    test_data = pd.read_csv(os.path.join('./data', arguments.input))
     target = arguments.target
 
     # transform
@@ -118,12 +121,6 @@ def process_test_data(preprocessor, model):
     test_score = get_scores(test_data[target], test_prediction)
 
     return test_prediction, test_score
-
-def get_data(file_name):
-    return pd.read_csv('./data/{}'.format(file_name))
-
-def save_data(dataset, file_name):
-    return dataset.to_csv('./result/{}'.format(file_name))
 
 def get_scores(actual_y, predicted_y):
     score_functions = [precision_score, recall_score, accuracy_score, f1_score]
