@@ -107,13 +107,6 @@ def main():
         ] = test_prediction
 
         # add score dataframes to the list
-        # scores = {
-        #     "train": train_score,
-        #     "validation": validation_score,
-        #     "test": test_score,
-        # }
-        # score_df = get_score_dataframe(index.scaler, index.model, scores)
-        # score_df_list.append(score_df)
         score_df_list.extend([train_score, validation_score, test_score])
 
     # concatenate score dataframes
@@ -165,15 +158,18 @@ def process_train_data(preprocessor, model):
     )
 
     # score
-    train_score = get_scores(y_train, X_train_prediction)
-    validation_score = get_scores(y_validation, X_validation_prediction)
+    train_score = get_scores(
+        y_train, X_train_prediction, preprocessor.scaler, model, "train",
+    )
+    validation_score = get_scores(
+        y_validation,
+        X_validation_prediction,
+        preprocessor.scaler,
+        model,
+        "validation",
+    )
 
-    #######
-    a = get_score_dataframe(preprocessor.scaler, model, "train", train_score)
-    b = get_score_dataframe(preprocessor.scaler, model, "validation", validation_score)
-
-    # return train_score, validation_score
-    return a, b
+    return train_score, validation_score
 
 
 def process_test_data(preprocessor, model):
@@ -199,16 +195,18 @@ def process_test_data(preprocessor, model):
     test_prediction = load(model_path).predict(test_transformed)
 
     # score
-    test_score = get_scores(test_data[target], test_prediction)
+    test_score = get_scores(
+        test_data[target], test_prediction, preprocessor.scaler, model, "test"
+    )
 
-    ##############
-    a = get_score_dataframe(preprocessor.scaler, model, "test", test_score)
-
-    # return test_prediction, test_score
-    return test_prediction, a
+    return test_prediction, test_score
 
 
-def get_scores(actual_y, predicted_y):
+def get_scores(actual_y, predicted_y, scaler, model, data_name):
+    """
+    return: score dataframe
+    """
+
     score_functions = [
         precision_score,
         recall_score,
@@ -220,11 +218,6 @@ def get_scores(actual_y, predicted_y):
     for function in score_functions:
         scores.append(function(actual_y, predicted_y))
 
-    return scores
-
-
-def get_score_dataframe(scaler, model, data_name, scores):
-
     # get multi-index for report dataframe
     report_index = pd.MultiIndex.from_tuples(
         [(scaler.__name__, model, data_name)],
@@ -234,30 +227,11 @@ def get_score_dataframe(scaler, model, data_name, scores):
     # create dataframe for scores
     score_data = pd.DataFrame(
         [scores],
-        columns=["Precision", "Recall", "Accuracy", "F1"],
+        columns=[function.__name__ for function in score_functions],
         index=report_index,
     )
 
     return score_data
- 
-# def get_score_dataframe(scaler, model, scores):
-#     for data_name, score in scores.items():
-
-#         # get multi-index for report dataframe
-#         report_index = pd.MultiIndex.from_tuples(
-#             [(scaler.__name__, model.__name__, data_name)],
-#             names=["scaler", "model", "data"],
-#         )
-
-#         # create dataframe for scores
-#         score_data = pd.DataFrame(
-#             [score],
-#             columns=["Precision", "Recall", "Accuracy", "F1"],
-#             index=report_index,
-#         )
-
-#     return score_data
-# 
 
 
 if __name__ == "__main__":
