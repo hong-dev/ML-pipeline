@@ -4,6 +4,8 @@ import pandas as pd
 
 from itertools import product
 from collections import namedtuple
+from joblib import dump, load
+
 from sklearn.preprocessing import (
     StandardScaler,
     RobustScaler,
@@ -23,6 +25,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
 
 from ml_class import TestSplit, Preprocessor
+
+joblib_dir = "./joblib/"
+preprocessor_joblib = os.path.join(joblib_dir, "{}" + ".joblib")
+model_joblib = os.path.join(joblib_dir, "{}" + ".joblib")
 
 
 def get_arguments():
@@ -131,14 +137,27 @@ def process_train_data(preprocessor, model):
         train_data, target
     )
 
-    # fit and transform
-    X_train_transformed = preprocessor.fit_transform(X_train)
-    X_validation_transformed = preprocessor.transform(X_validation)
+    # fit preprocessor
+    preprocessor.fit(X_train)
+    preprocessor_path = preprocessor_joblib.format(
+        preprocessor.scaler.__name__
+    )
+    dump(preprocessor, preprocessor_path)
 
-    # fit and predict
+    # transform preprocessor
+    X_train_transformed = load(preprocessor_path).transform(X_train)
+    X_validation_transformed = load(preprocessor_path).transform(X_validation)
+
+    # fit model
     model.fit(X_train_transformed, y_train)
-    X_train_prediction = model.predict(X_train_transformed)
-    X_validation_prediction = model.predict(X_validation_transformed)
+    model_path = model_joblib.format(model)
+    dump(model, model_path)
+
+    # predict
+    X_train_prediction = load(model_path).predict(X_train_transformed)
+    X_validation_prediction = load(model_path).predict(
+        X_validation_transformed
+    )
 
     # score
     train_score = get_scores(y_train, X_train_prediction)
@@ -158,10 +177,16 @@ def process_test_data(preprocessor, model):
     target = arguments.target
 
     # transform
-    test_transformed = preprocessor.transform(test_data.drop(target, axis=1))
+    preprocessor_path = preprocessor_joblib.format(
+        preprocessor.scaler.__name__
+    )
+    test_transformed = load(preprocessor_path).transform(
+        test_data.drop(target, axis=1)
+    )
 
     # predict
-    test_prediction = model.predict(test_transformed)
+    model_path = model_joblib.format(model)
+    test_prediction = load(model_path).predict(test_transformed)
 
     # score
     test_score = get_scores(test_data[target], test_prediction)
