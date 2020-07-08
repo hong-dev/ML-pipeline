@@ -204,12 +204,10 @@ def process_test_data(preprocessor, model):
 
 
 def split_test(dataset, target):
-    features_without_target = dataset.drop(target, axis=1)
-    target_feature = dataset[target]
+    X = dataset.drop(target, axis=1)
+    y = dataset[target]
 
-    X_train, X_validation, y_train, y_validation = train_test_split(
-        features_without_target, target_feature
-    )
+    X_train, X_validation, y_train, y_validation = train_test_split(X, y)
 
     return X_train, X_validation, y_train, y_validation
 

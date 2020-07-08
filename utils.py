@@ -11,6 +11,9 @@ from sklearn.pipeline import make_pipeline
 class Preprocessor(TransformerMixin):
     def __init__(self, scaler):
         self.scaler = scaler
+        self.numeric_features = None
+        self.categorical_features = None
+        self.column_transformer = None
 
     # preprocess numeric and categorical features
     def _build_pipeline(self):
@@ -46,7 +49,7 @@ class Preprocessor(TransformerMixin):
     def fit(self, X, y=None):
         self.numeric_features = X.select_dtypes(np.number).columns
         self.categorical_features = X.select_dtypes(exclude=np.number).columns
-
+ 
         self.column_transformer = self._build_pipeline()
         self.column_transformer.fit(X)
 
