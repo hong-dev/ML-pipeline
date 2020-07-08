@@ -5,13 +5,12 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.base import TransformerMixin
-from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.pipeline import make_pipeline
 
 
 class Preprocessor(TransformerMixin):
     def __init__(self, scaler):
         self.scaler = scaler
-        self.numeric_features = None
 
     # preprocess numeric and categorical features
     def _build_pipeline(self):
