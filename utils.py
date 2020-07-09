@@ -13,16 +13,26 @@ class Preprocessor(TransformerMixin):
         self.scaler = scaler
         self.numeric_features = None
         self.categorical_features = None
-        self.column_transformer = None
+        self.pipeline = None
+
+    def _set_feature_types(self, X):
+        self.numeric_features = X.select_dtypes(np.number).columns
+        self.categorical_features = X.select_dtypes(exclude=np.number).columns
+        return
 
     # preprocess numeric and categorical features
     def _build_pipeline(self):
-        return ColumnTransformer(
+        assert (
+            self.numeric_features is not None
+            and self.categorical_features is not None
+        )
+
+        self.pipeline = ColumnTransformer(
             transformers=[
                 (
                     "numeric",
                     make_pipeline(
-                        SimpleImputer(strategy="median"), self.scaler()
+                        SimpleImputer(strategy="median"), self.scaler(),
                     ),
                     self.numeric_features,
                 ),
@@ -36,29 +46,28 @@ class Preprocessor(TransformerMixin):
                 ),
             ]
         )
+        return
 
     # get column names for dataframe
     def get_column_names(self):
-        cats_names = self.column_transformer.named_transformers_[
-            "categorical"
-        ][1].get_feature_names(self.categorical_features)
+        cats_names = self.pipeline.named_transformers_["categorical"][
+            1
+        ].get_feature_names(self.categorical_features)
         feat_names = np.concatenate([self.numeric_features, cats_names])
 
         return feat_names
 
     def fit(self, X, y=None):
-        self.numeric_features = X.select_dtypes(np.number).columns
-        self.categorical_features = X.select_dtypes(exclude=np.number).columns
- 
-        self.column_transformer = self._build_pipeline()
-        self.column_transformer.fit(X)
+        self._set_feature_types(X)
+        self._build_pipeline()
+        self.pipeline.fit(X)
 
         return self
 
     def transform(self, X):
-        transformed_data = self.column_transformer.transform(X)
+        transformed_data = self.pipeline.transform(X)
         column_names = self.get_column_names()
 
         return pd.DataFrame(
-            transformed_data, columns=column_names, index=X.index
+            transformed_data, columns=column_names, index=X.index,
         )
