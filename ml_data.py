@@ -19,12 +19,13 @@ from sklearn.metrics import (
     f1_score,
 )
 
+from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
 
-from ml_class import TestSplit, Preprocessor
+from utils import Preprocessor
 
 joblib_dir = "./joblib/"
 preprocessor_joblib = os.path.join(joblib_dir, "{}" + ".joblib")
@@ -131,7 +132,7 @@ def process_train_data(preprocessor, model):
 
     # split data
     target = get_arguments().target
-    (X_train, X_validation, y_train, y_validation) = TestSplit().split_test(
+    (X_train, X_validation, y_train, y_validation) = split_test(
         train_data, target
     )
 
@@ -200,6 +201,15 @@ def process_test_data(preprocessor, model):
     )
 
     return test_prediction, test_score
+
+
+def split_test(dataset, target):
+    X = dataset.drop(target, axis=1)
+    y = dataset[target]
+
+    X_train, X_validation, y_train, y_validation = train_test_split(X, y)
+
+    return X_train, X_validation, y_train, y_validation
 
 
 def get_scores(actual_y, predicted_y, scaler, model, data_name):
