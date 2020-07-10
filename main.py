@@ -11,18 +11,8 @@ from sklearn.metrics import (
     f1_score,
 )
 
+import config
 from utils import Preprocessor
-from config import (
-    scalers,
-    models,
-    target,
-    train_file,
-    test_file,
-    preprocessor_joblib,
-    model_joblib,
-    prediction_file,
-    report_file,
-)
 
 
 def main():
@@ -31,7 +21,7 @@ def main():
     score_df_list = []
 
     # transform, predict, score for each combination
-    for scaler, (model_class, params) in product(scalers, models):
+    for scaler, (model_class, params) in product(config.scalers, config.models):
 
         # assign preprocessor and model
         preprocessor = Preprocessor(scaler)
@@ -53,8 +43,8 @@ def main():
     report_df = pd.concat(score_df_list)
 
     # save prediction and report to csv files
-    prediction_df.to_csv(prediction_file)
-    report_df.to_csv(report_file)
+    prediction_df.to_csv(config.prediction_file)
+    report_df.to_csv(config.report_file)
 
 
 def process_train_data(preprocessor, model):
@@ -63,16 +53,16 @@ def process_train_data(preprocessor, model):
     """
 
     # get dataset
-    train_data = pd.read_csv(train_file)
+    train_data = pd.read_csv(config.train_file)
 
     # split data
     (X_train, X_validation, y_train, y_validation) = split_test(
-        train_data, target
+        train_data, config.target
     )
 
     # fit preprocessor
     preprocessor.fit(X_train)
-    preprocessor_path = preprocessor_joblib.format(
+    preprocessor_path = config.preprocessor_joblib.format(
         preprocessor.scaler.__name__
     )
     dump(preprocessor, preprocessor_path)
@@ -83,7 +73,7 @@ def process_train_data(preprocessor, model):
 
     # fit model
     model.fit(X_train_transformed, y_train)
-    model_path = model_joblib.format(model)
+    model_path = config.model_joblib.format(model)
     dump(model, model_path)
 
     # predict
@@ -113,23 +103,23 @@ def process_test_data(preprocessor, model):
     """
 
     # get dataset
-    test_data = pd.read_csv(test_file)
+    test_data = pd.read_csv(config.test_file)
 
     # transform
-    preprocessor_path = preprocessor_joblib.format(
+    preprocessor_path = config.preprocessor_joblib.format(
         preprocessor.scaler.__name__
     )
     test_transformed = load(preprocessor_path).transform(
-        test_data.drop(target, axis=1)
+        test_data.drop(config.target, axis=1)
     )
 
     # predict
-    model_path = model_joblib.format(model)
+    model_path = config.model_joblib.format(model)
     test_prediction = load(model_path).predict(test_transformed)
 
     # score
     test_score = get_scores(
-        test_data[target], test_prediction, preprocessor.scaler, model, "test"
+        test_data[config.target], test_prediction, preprocessor.scaler, model, "test"
     )
 
     return test_prediction, test_score
