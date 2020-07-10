@@ -1,17 +1,10 @@
-import os
-import argparse
 import pandas as pd
 
 from itertools import product
 from collections import namedtuple
 from joblib import dump, load
+from sklearn.model_selection import train_test_split
 
-from sklearn.preprocessing import (
-    StandardScaler,
-    RobustScaler,
-    MinMaxScaler,
-    MaxAbsScaler,
-)
 from sklearn.metrics import (
     accuracy_score,
     recall_score,
@@ -19,71 +12,24 @@ from sklearn.metrics import (
     f1_score,
 )
 
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import LinearSVC
-
 from utils import Preprocessor
-
-joblib_dir = "./joblib/"
-preprocessor_joblib = os.path.join(joblib_dir, "{}" + ".joblib")
-model_joblib = os.path.join(joblib_dir, "{}" + ".joblib")
-
-
-def get_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--train",
-        default="marketing_train.csv",
-        help="Write file name you want to train",
-    )
-    parser.add_argument(
-        "--input",
-        default="marketing_test.csv",
-        help="Write file name you want to predict",
-    )
-    parser.add_argument(
-        "--prediction",
-        default="pred.csv",
-        help="Write file name you want to save prediction as",
-    )
-    parser.add_argument(
-        "--report",
-        default="report.csv",
-        help="Write file name you want to save report as",
-    )
-    parser.add_argument(
-        "--target",
-        default="insurance_subscribe",
-        help="Write target feature",
-    )
-
-    return parser.parse_args()
+from config import (
+    scalers,
+    models,
+    target,
+    train_file,
+    test_file,
+    preprocessor_joblib,
+    model_joblib,
+    prediction_file,
+    report_file,
+)
 
 
 def main():
-    scalers = [
-        StandardScaler,
-        RobustScaler,
-        MinMaxScaler,
-        MaxAbsScaler,
-    ]
-
-    models = {
-        LogisticRegression: {"max_iter": 700},
-        DecisionTreeClassifier: {"max_depth": 4},
-        RandomForestClassifier: {"max_depth": 4},
-        LinearSVC: {"dual": False},
-    }
-
     # get combinations of scalers and models
-    scaler_model_combination = list(product(scalers, models))
-    named_tuple = namedtuple("Index", "scaler model")
-    index_combination = [
-        named_tuple(index[0], index[1]) for index in scaler_model_combination
-    ]
+    Index = namedtuple("Index", "scaler model")
+    index_combination = [Index(s, m) for s, m in product(scalers, models)]
 
     # create prediction dataframe and score dataframe list
     prediction_df = pd.DataFrame()
@@ -97,9 +43,7 @@ def main():
         model = index.model(**models[index.model])
 
         # process train, validation, test data
-        train_score, validation_score = process_train_data(
-            preprocessor, model
-        )
+        train_score, validation_score = process_train_data(preprocessor, model)
         test_prediction, test_score = process_test_data(preprocessor, model)
 
         # add predicted data to prediction dataframe
@@ -114,11 +58,8 @@ def main():
     report_df = pd.concat(score_df_list)
 
     # save prediction and report to csv files
-    arguments = get_arguments()
-    result_dir = "./result"
-
-    prediction_df.to_csv(os.path.join(result_dir, arguments.prediction))
-    report_df.to_csv(os.path.join(result_dir, arguments.report))
+    prediction_df.to_csv(prediction_file)
+    report_df.to_csv(report_file)
 
 
 def process_train_data(preprocessor, model):
@@ -127,11 +68,9 @@ def process_train_data(preprocessor, model):
     """
 
     # get dataset
-    arguments = get_arguments()
-    train_data = pd.read_csv(os.path.join("./data", arguments.train))
+    train_data = pd.read_csv(train_file)
 
     # split data
-    target = get_arguments().target
     (X_train, X_validation, y_train, y_validation) = split_test(
         train_data, target
     )
@@ -179,9 +118,7 @@ def process_test_data(preprocessor, model):
     """
 
     # get dataset
-    arguments = get_arguments()
-    test_data = pd.read_csv(os.path.join("./data", arguments.input))
-    target = arguments.target
+    test_data = pd.read_csv(test_file)
 
     # transform
     preprocessor_path = preprocessor_joblib.format(
