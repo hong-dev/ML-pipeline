@@ -59,17 +59,17 @@ models = {
     LinearSVC: {"dual": False},
 }
 
-arguments = get_arguments()
+args = get_arguments()
 
-target = arguments.target
+target = args.target
 
 dataset_dir = "./data"
-train_file = os.path.join(dataset_dir, arguments.train)
-test_file = os.path.join(dataset_dir, arguments.input)
+train_file = os.path.join(dataset_dir, args.train)
+test_file = os.path.join(dataset_dir, args.input)
 
 result_dir = "./result"
-prediction_file = os.path.join(result_dir, arguments.prediction)
-report_file = os.path.join(result_dir, arguments.report)
+prediction_file = os.path.join(result_dir, args.prediction)
+report_file = os.path.join(result_dir, args.report)
 
 joblib_dir = "./joblib"
 preprocessor_joblib = os.path.join(joblib_dir, "{}" + ".joblib")
