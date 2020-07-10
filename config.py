@@ -52,12 +52,12 @@ scalers = [
     MaxAbsScaler,
 ]
 
-models = {
-    LogisticRegression: {"max_iter": 700},
-    DecisionTreeClassifier: {"max_depth": 4},
-    RandomForestClassifier: {"max_depth": 4},
-    LinearSVC: {"dual": False},
-}
+models = [
+    (LogisticRegression, {"max_iter": 700}),
+    (DecisionTreeClassifier, {"max_depth": 4}),
+    (RandomForestClassifier, {"max_depth": 4}),
+    (LinearSVC, {"dual": False}),
+]
 
 args = get_arguments()
 

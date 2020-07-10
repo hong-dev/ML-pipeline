@@ -1,7 +1,6 @@
 import pandas as pd
 
 from itertools import product
-from collections import namedtuple
 from joblib import dump, load
 from sklearn.model_selection import train_test_split
 
@@ -27,20 +26,16 @@ from config import (
 
 
 def main():
-    # get combinations of scalers and models
-    Index = namedtuple("Index", "scaler model")
-    index_combination = [Index(s, m) for s, m in product(scalers, models)]
-
     # create prediction dataframe and score dataframe list
     prediction_df = pd.DataFrame()
     score_df_list = []
 
     # transform, predict, score for each combination
-    for index in index_combination:
+    for scaler, (model_class, params) in product(scalers, models):
 
         # assign preprocessor and model
-        preprocessor = Preprocessor(index.scaler)
-        model = index.model(**models[index.model])
+        preprocessor = Preprocessor(scaler)
+        model = model_class(**params)
 
         # process train, validation, test data
         train_score, validation_score = process_train_data(preprocessor, model)
@@ -48,7 +43,7 @@ def main():
 
         # add predicted data to prediction dataframe
         prediction_df[
-            f"{index.scaler.__name__}-{index.model.__name__}"
+            f"{scaler.__name__}-{model}"
         ] = test_prediction
 
         # add score dataframes to the list
