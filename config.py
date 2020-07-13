@@ -64,13 +64,13 @@ args = get_arguments()
 target = args.target
 
 dataset_dir = "./data"
-train_file = os.path.join(dataset_dir, args.train)
-test_file = os.path.join(dataset_dir, args.input)
+train_file_path = os.path.join(dataset_dir, args.train)
+test_file_path = os.path.join(dataset_dir, args.input)
 
 result_dir = "./result"
-prediction_file = os.path.join(result_dir, args.prediction)
-report_file = os.path.join(result_dir, args.report)
+prediction_file_path = os.path.join(result_dir, args.prediction)
+report_file_path = os.path.join(result_dir, args.report)
 
 joblib_dir = "./joblib"
-preprocessor_joblib = os.path.join(joblib_dir, "{}" + ".joblib")
-model_joblib = os.path.join(joblib_dir, "{}" + ".joblib")
+preprocessor_joblib_path = os.path.join(joblib_dir, "{}" + ".joblib")
+model_joblib_path = os.path.join(joblib_dir, "{}" + ".joblib")

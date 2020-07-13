@@ -43,8 +43,8 @@ def main():
     report_df = pd.concat(score_df_list)
 
     # save prediction and report to csv files
-    prediction_df.to_csv(config.prediction_file)
-    report_df.to_csv(config.report_file)
+    prediction_df.to_csv(config.prediction_file_path)
+    report_df.to_csv(config.report_file_path)
 
 
 def process_train_data(preprocessor, model):
@@ -53,7 +53,7 @@ def process_train_data(preprocessor, model):
     """
 
     # get dataset
-    train_data = pd.read_csv(config.train_file)
+    train_data = pd.read_csv(config.train_file_path)
 
     # split data
     (X_train, X_validation, y_train, y_validation) = split_test(
@@ -62,7 +62,7 @@ def process_train_data(preprocessor, model):
 
     # fit preprocessor
     preprocessor.fit(X_train)
-    preprocessor_path = config.preprocessor_joblib.format(
+    preprocessor_path = config.preprocessor_joblib_path.format(
         preprocessor.scaler.__name__
     )
     dump(preprocessor, preprocessor_path)
@@ -73,7 +73,7 @@ def process_train_data(preprocessor, model):
 
     # fit model
     model.fit(X_train_transformed, y_train)
-    model_path = config.model_joblib.format(model)
+    model_path = config.model_joblib_path.format(model)
     dump(model, model_path)
 
     # predict
@@ -103,10 +103,10 @@ def process_test_data(preprocessor, model):
     """
 
     # get dataset
-    test_data = pd.read_csv(config.test_file)
+    test_data = pd.read_csv(config.test_file_path)
 
     # transform
-    preprocessor_path = config.preprocessor_joblib.format(
+    preprocessor_path = config.preprocessor_joblib_path.format(
         preprocessor.scaler.__name__
     )
     test_transformed = load(preprocessor_path).transform(
@@ -114,7 +114,7 @@ def process_test_data(preprocessor, model):
     )
 
     # predict
-    model_path = config.model_joblib.format(model)
+    model_path = config.model_joblib_path.format(model)
     test_prediction = load(model_path).predict(test_transformed)
 
     # score
