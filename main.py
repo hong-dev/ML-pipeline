@@ -1,17 +1,9 @@
-import os
-import argparse
 import pandas as pd
 
 from itertools import product
-from collections import namedtuple
 from joblib import dump, load
+from sklearn.model_selection import train_test_split
 
-from sklearn.preprocessing import (
-    StandardScaler,
-    RobustScaler,
-    MinMaxScaler,
-    MaxAbsScaler,
-)
 from sklearn.metrics import (
     accuracy_score,
     recall_score,
@@ -19,92 +11,29 @@ from sklearn.metrics import (
     f1_score,
 )
 
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import LinearSVC
-
+import config
 from utils import Preprocessor
-
-joblib_dir = "./joblib/"
-preprocessor_joblib = os.path.join(joblib_dir, "{}" + ".joblib")
-model_joblib = os.path.join(joblib_dir, "{}" + ".joblib")
-
-
-def get_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--train",
-        default="marketing_train.csv",
-        help="Write file name you want to train",
-    )
-    parser.add_argument(
-        "--input",
-        default="marketing_test.csv",
-        help="Write file name you want to predict",
-    )
-    parser.add_argument(
-        "--prediction",
-        default="pred.csv",
-        help="Write file name you want to save prediction as",
-    )
-    parser.add_argument(
-        "--report",
-        default="report.csv",
-        help="Write file name you want to save report as",
-    )
-    parser.add_argument(
-        "--target",
-        default="insurance_subscribe",
-        help="Write target feature",
-    )
-
-    return parser.parse_args()
 
 
 def main():
-    scalers = [
-        StandardScaler,
-        RobustScaler,
-        MinMaxScaler,
-        MaxAbsScaler,
-    ]
-
-    models = {
-        LogisticRegression: {"max_iter": 700},
-        DecisionTreeClassifier: {"max_depth": 4},
-        RandomForestClassifier: {"max_depth": 4},
-        LinearSVC: {"dual": False},
-    }
-
-    # get combinations of scalers and models
-    scaler_model_combination = list(product(scalers, models))
-    named_tuple = namedtuple("Index", "scaler model")
-    index_combination = [
-        named_tuple(index[0], index[1]) for index in scaler_model_combination
-    ]
-
     # create prediction dataframe and score dataframe list
     prediction_df = pd.DataFrame()
     score_df_list = []
 
     # transform, predict, score for each combination
-    for index in index_combination:
+    for scaler, (model_class, params) in product(config.scalers, config.models):
 
         # assign preprocessor and model
-        preprocessor = Preprocessor(index.scaler)
-        model = index.model(**models[index.model])
+        preprocessor = Preprocessor(scaler)
+        model = model_class(**params)
 
         # process train, validation, test data
-        train_score, validation_score = process_train_data(
-            preprocessor, model
-        )
+        train_score, validation_score = process_train_data(preprocessor, model)
         test_prediction, test_score = process_test_data(preprocessor, model)
 
         # add predicted data to prediction dataframe
         prediction_df[
-            f"{index.scaler.__name__}-{index.model.__name__}"
+            f"{scaler.__name__}-{model}"
         ] = test_prediction
 
         # add score dataframes to the list
@@ -114,11 +43,8 @@ def main():
     report_df = pd.concat(score_df_list)
 
     # save prediction and report to csv files
-    arguments = get_arguments()
-    result_dir = "./result"
-
-    prediction_df.to_csv(os.path.join(result_dir, arguments.prediction))
-    report_df.to_csv(os.path.join(result_dir, arguments.report))
+    prediction_df.to_csv(config.prediction_file_path)
+    report_df.to_csv(config.report_file_path)
 
 
 def process_train_data(preprocessor, model):
@@ -127,18 +53,16 @@ def process_train_data(preprocessor, model):
     """
 
     # get dataset
-    arguments = get_arguments()
-    train_data = pd.read_csv(os.path.join("./data", arguments.train))
+    train_data = pd.read_csv(config.train_file_path)
 
     # split data
-    target = get_arguments().target
     (X_train, X_validation, y_train, y_validation) = split_test(
-        train_data, target
+        train_data, config.target
     )
 
     # fit preprocessor
     preprocessor.fit(X_train)
-    preprocessor_path = preprocessor_joblib.format(
+    preprocessor_path = config.preprocessor_joblib_path.format(
         preprocessor.scaler.__name__
     )
     dump(preprocessor, preprocessor_path)
@@ -149,7 +73,7 @@ def process_train_data(preprocessor, model):
 
     # fit model
     model.fit(X_train_transformed, y_train)
-    model_path = model_joblib.format(model)
+    model_path = config.model_joblib_path.format(model)
     dump(model, model_path)
 
     # predict
@@ -179,25 +103,23 @@ def process_test_data(preprocessor, model):
     """
 
     # get dataset
-    arguments = get_arguments()
-    test_data = pd.read_csv(os.path.join("./data", arguments.input))
-    target = arguments.target
+    test_data = pd.read_csv(config.test_file_path)
 
     # transform
-    preprocessor_path = preprocessor_joblib.format(
+    preprocessor_path = config.preprocessor_joblib_path.format(
         preprocessor.scaler.__name__
     )
     test_transformed = load(preprocessor_path).transform(
-        test_data.drop(target, axis=1)
+        test_data.drop(config.target, axis=1)
     )
 
     # predict
-    model_path = model_joblib.format(model)
+    model_path = config.model_joblib_path.format(model)
     test_prediction = load(model_path).predict(test_transformed)
 
     # score
     test_score = get_scores(
-        test_data[target], test_prediction, preprocessor.scaler, model, "test"
+        test_data[config.target], test_prediction, preprocessor.scaler, model, "test"
     )
 
     return test_prediction, test_score
