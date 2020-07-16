@@ -1,5 +1,7 @@
 import os
-import argparse
+# import argparse
+
+# from main import get_arguments
 
 from sklearn.preprocessing import (
     StandardScaler,
@@ -14,36 +16,35 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
 
 
-def get_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--train",
-        default="marketing_train.csv",
-        help="Write file name you want to train",
-    )
-    parser.add_argument(
-        "--input",
-        default="marketing_test.csv",
-        help="Write file name you want to predict",
-    )
-    parser.add_argument(
-        "--prediction",
-        default="pred.csv",
-        help="Write file name you want to save prediction as",
-    )
-    parser.add_argument(
-        "--report",
-        default="report.csv",
-        help="Write file name you want to save report as",
-    )
-    parser.add_argument(
-        "--target",
-        default="insurance_subscribe",
-        help="Write target feature",
-    )
+# def get_arguments():
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument(
+#         "--train",
+#         default="marketing_train.csv",
+#         help="Write file name you want to train",
+#     )
+#     parser.add_argument(
+#         "--input",
+#         default="marketing_test.csv",
+#         help="Write file name you want to predict",
+#     )
+#     parser.add_argument(
+#         "--prediction",
+#         default="pred.csv",
+#         help="Write file name you want to save prediction as",
+#     )
+#     parser.add_argument(
+#         "--report",
+#         default="report.csv",
+#         help="Write file name you want to save report as",
+#     )
+#     parser.add_argument(
+#         "--target",
+#         default="insurance_subscribe",
+#         help="Write target feature",
+#     )
 
-    return parser.parse_args()
-
+#     return parser.parse_args()
 
 scalers = [
     StandardScaler,
@@ -59,18 +60,20 @@ models = [
     (LinearSVC, {"dual": False}),
 ]
 
-args = get_arguments()
 
-target = args.target
+# # if __name__=='__main__':
+# args = get_arguments()
 
-dataset_dir = "./data"
-train_file_path = os.path.join(dataset_dir, args.train)
-test_file_path = os.path.join(dataset_dir, args.input)
+# target = args.target
 
-result_dir = "./result"
-prediction_file_path = os.path.join(result_dir, args.prediction)
-report_file_path = os.path.join(result_dir, args.report)
+# dataset_dir = "./data"
+# train_file_path = os.path.join(dataset_dir, args.train)
+# test_file_path = os.path.join(dataset_dir, args.input)
 
-joblib_dir = "./joblib"
-preprocessor_joblib_path = os.path.join(joblib_dir, "{}" + ".joblib")
-model_joblib_path = os.path.join(joblib_dir, "{}" + ".joblib")
+# result_dir = "./result"
+# prediction_file_path = os.path.join(result_dir, args.prediction)
+# report_file_path = os.path.join(result_dir, args.report)
+
+# joblib_dir = "./joblib"
+# preprocessor_joblib_path = os.path.join(joblib_dir, "{}" + ".joblib")
+# model_joblib_path = os.path.join(joblib_dir, "{}, {}" + ".joblib")

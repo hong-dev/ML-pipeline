@@ -7,6 +7,27 @@ from sklearn.compose import ColumnTransformer
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import make_pipeline
 
+class FeatureSelector(TransformerMixin):
+    def __init__(self):
+        self.remove_columns = None
+
+    @staticmethod
+    def _remove_features(X):
+        remove_columns = []
+        for column in X:
+            if (X[column].dtype == object) and (len(X[column].unique()) > 30):
+                remove_columns.append(column)
+
+        return remove_columns
+
+    def fit(self, X, y=None):
+        self.remove_columns = self._remove_features(X)
+
+        return self
+
+    def transform(self, X):
+        return X.drop(columns=self.remove_columns)
+
 
 class Preprocessor(TransformerMixin):
     def __init__(self, scaler):

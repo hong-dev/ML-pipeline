@@ -1,5 +1,4 @@
 import unittest
-import tempfile
 import pandas as pd
 import numpy as np
 
@@ -17,7 +16,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
 
-from utils import Preprocessor
+from utils import Preprocessor, FeatureSelector
 
 
 class TestPreprocessor(unittest.TestCase):
@@ -29,8 +28,11 @@ class TestPreprocessor(unittest.TestCase):
             MaxAbsScaler,
         ]
 
-    def run_preprocessor(self, data, scaler):
+    def _run_preprocessor(self, data, scaler):
         dataset = pd.DataFrame(data=data)
+
+        feature_selector = FeatureSelector()
+        dataset = feature_selector.fit_transform(dataset)
 
         preprocessor = Preprocessor(scaler=scaler)
         fitted_preprocessor = preprocessor.fit_transform(dataset)
@@ -59,7 +61,7 @@ class TestPreprocessor(unittest.TestCase):
             True,
         )
 
-    def test_normal(self):
+    def test_small_data(self):
         """
         dataset: two numeric features, two categorical features
         """
@@ -72,7 +74,37 @@ class TestPreprocessor(unittest.TestCase):
         }
 
         for scaler in self.scalers:
-            self.run_preprocessor(data, scaler)
+            self._run_preprocessor(data, scaler)
+
+    def test_outlier(self):
+        """
+        dataset: outlier in numeric feature
+        """
+
+        data = {
+            "num1": [1, 2, 9999999999],
+            "cat1": ["a", "b", "c"],
+            "num2": [4, 5, 6],
+            "cat2": ["d", "e", "f"],
+        }
+
+        for scaler in self.scalers:
+            self._run_preprocessor(data, scaler)
+
+    def test_negative_num(self):
+        """
+        dataset: negative number in numeric feature
+        """
+
+        data = {
+            "num1": [1, 2, 3],
+            "cat1": ["a", "b", "c"],
+            "num2": [4, -50, 6],
+            "cat2": ["d", "e", "f"],
+        }
+
+        for scaler in self.scalers:
+            self._run_preprocessor(data, scaler)
 
     def test_missing_numeric(self):
         """
@@ -87,7 +119,7 @@ class TestPreprocessor(unittest.TestCase):
         }
 
         for scaler in self.scalers:
-            self.run_preprocessor(data, scaler)
+            self._run_preprocessor(data, scaler)
 
     def test_missing_categorical(self):
         """
@@ -102,9 +134,9 @@ class TestPreprocessor(unittest.TestCase):
         }
 
         for scaler in self.scalers:
-            self.run_preprocessor(data, scaler)
+            self._run_preprocessor(data, scaler)
 
-    def test_missing_many(self):
+    def test_missing_num_cat_values(self):
         """
         dataset: missing values in numeric and categorical features
         """
@@ -117,7 +149,7 @@ class TestPreprocessor(unittest.TestCase):
         }
 
         for scaler in self.scalers:
-            self.run_preprocessor(data, scaler)
+            self._run_preprocessor(data, scaler)
 
     def test_titanic_data(self):
         """
@@ -127,7 +159,7 @@ class TestPreprocessor(unittest.TestCase):
         data = pd.read_csv("./data/source_kaggle_titanic_train.csv")
 
         for scaler in self.scalers:
-            self.run_preprocessor(data, scaler)
+            self._run_preprocessor(data, scaler)
 
     def test_marketing_data(self):
         """
@@ -137,7 +169,7 @@ class TestPreprocessor(unittest.TestCase):
         data = pd.read_csv("./data/marketing_train.csv")
 
         for scaler in self.scalers:
-            self.run_preprocessor(data, scaler)
+            self._run_preprocessor(data, scaler)
 
 
 if __name__ == "__main__":
