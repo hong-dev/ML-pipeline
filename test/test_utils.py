@@ -18,7 +18,6 @@ from sklearn.svm import LinearSVC
 
 from utils import Preprocessor, FeatureSelector
 
-
 class TestPreprocessor(unittest.TestCase):
     def setUp(self):
         self.scalers = [

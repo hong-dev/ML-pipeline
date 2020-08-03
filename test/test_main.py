@@ -50,11 +50,11 @@ class TestMain(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdirname:
             print(tmpdirname)
 
-            # main()
-        
+            main()
+
             self.assertEqual(1, 2)
 
-    # # 내가 여기에서 mock을 해야하는 것은, config.py의 args?
+    # 내가 여기에서 mock을 해야하는 것은, config.py의 args?
     # @patch('config.train_file_path', return_value='AAAAAA', side_effect=["A", "B", "C"])
     # def test_titanic(self, mock_get):
     #     """

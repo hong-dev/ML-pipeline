@@ -42,12 +42,11 @@ def get_arguments():
         help="Write file name you want to save report as",
     )
     parser.add_argument(
-        "--target",
-        default="insurance_subscribe",
-        help="Write target feature",
+        "--target", default="insurance_subscribe", help="Write target feature",
     )
 
     return parser.parse_args()
+
 
 args = get_arguments()
 
@@ -64,7 +63,6 @@ report_file_path = os.path.join(result_dir, args.report)
 joblib_dir = "./joblib"
 preprocessor_joblib_path = os.path.join(joblib_dir, "{}" + ".joblib")
 model_joblib_path = os.path.join(joblib_dir, "{}, {}" + ".joblib")
-
 
 
 def main():
@@ -99,8 +97,6 @@ def main():
     report_df.to_csv(report_file_path)
 
 
-
-
 def process_train_data(preprocessor, model):
     """
     return: score(train data, validation data)
@@ -124,9 +120,7 @@ def process_train_data(preprocessor, model):
 
     pipe.fit(X_train, y_train)
 
-    pipe_path = model_joblib_path.format(
-        model, preprocessor.scaler.__name__
-    )
+    pipe_path = model_joblib_path.format(model, preprocessor.scaler.__name__)
     dump(pipe, pipe_path)
 
     X_train_prediction = load(pipe_path).predict(X_train)
@@ -155,12 +149,8 @@ def process_test_data(preprocessor, model):
     # get dataset
     test_data = pd.read_csv(test_file_path)
 
-    pipe_path = model_joblib_path.format(
-        model, preprocessor.scaler.__name__
-    )
-    test_prediction = load(pipe_path).predict(
-        test_data.drop(target, axis=1)
-    )
+    pipe_path = model_joblib_path.format(model, preprocessor.scaler.__name__)
+    test_prediction = load(pipe_path).predict(test_data.drop(target, axis=1))
 
     # score
     drop_index = test_data[test_data[target].isnull()].index.tolist()
