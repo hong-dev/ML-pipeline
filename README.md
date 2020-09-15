@@ -36,9 +36,11 @@
 # Directory/File
 
 - `data/` : includes original train set and test set
+- `joblib/` : includes fitted train datasets and models
 - `result/` : includes created prediction file and report(scores) file
-- `ml_class.py` : classes for importing (TestSplit, Preprocessor)
-- `ml_data.py` : main functions for data process
+- `main.py` : main functions for ML process
+- `config.py` : includes arguments, scaler list, model list, file path
+- `utils.py` : Preprocessor class which is used in main.py
 
 <br>
 
@@ -48,7 +50,7 @@
 
 ```bash
 # bash command
-$ python ml_data.py
+$ python main.py
 ```
 
 ### Arguments
